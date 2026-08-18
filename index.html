@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <!-- Cấu hình viewport chặn zoom và co giãn để bé không vô tình phóng to màn hình -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- Thẻ meta hỗ trợ iOS web app toàn màn hình khi Thêm vào Màn hình chính -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Bé Chơi Bàn Phím & Cảm Ứng</title>
     <!-- Sử dụng font chữ tròn trịa, đáng yêu -->
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
@@ -419,23 +422,40 @@
         }
 
         // --- XỬ LÝ TOÀN MÀN HÌNH VÀ ÂM THANH ---
+        let isSimulatedFullscreeniOS = false;
+
         async function toggleFullscreen() {
+            const docEl = document.documentElement;
+            const requestFS = docEl.requestFullscreen || docEl.webkitRequestFullscreen;
+            const exitFS = document.exitFullscreen || document.webkitExitFullscreen;
+            const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+
             try {
-                if (!document.fullscreenElement) {
-                    if (document.documentElement.requestFullscreen) {
+                if (requestFS) {
+                    // Trình duyệt hỗ trợ Fullscreen API (Android, PC, iPadOS...)
+                    if (!fsElement) {
                         try {
-                            // Yêu cầu khóa bàn phím hệ thống ở chế độ toàn màn hình
-                            await document.documentElement.requestFullscreen({ keyboardLock: "browser" });
+                            await requestFS.call(docEl, { keyboardLock: "browser" });
                         } catch (e) {
-                            await document.documentElement.requestFullscreen();
+                            await requestFS.call(docEl);
+                        }
+                        if (navigator.keyboard && navigator.keyboard.lock) {
+                            await navigator.keyboard.lock().catch(() => {});
+                        }
+                    } else {
+                        if (exitFS) {
+                            await exitFS.call(document);
                         }
                     }
-                    if (navigator.keyboard && navigator.keyboard.lock) {
-                        await navigator.keyboard.lock();
-                    }
                 } else {
-                    if (document.exitFullscreen) {
-                        await document.exitFullscreen();
+                    // Trình duyệt KHÔNG hỗ trợ Fullscreen API (đặc thù iPhone iOS Safari/Chrome)
+                    isSimulatedFullscreeniOS = !isSimulatedFullscreeniOS;
+                    const controlsWrapper = document.querySelector('.controls-wrapper');
+                    if (isSimulatedFullscreeniOS) {
+                        controlsWrapper.style.display = 'none';
+                        showToast('iOS (iPhone): Đã ẩn nút! Mẹo: Chọn "Chia sẻ" ➔ "Thêm vào MH chính" để xem tràn màn hình.');
+                    } else {
+                        controlsWrapper.style.display = 'flex';
                     }
                 }
             } catch (err) {
@@ -445,13 +465,15 @@
 
         function updateFullscreenUI() {
             const controlsWrapper = document.querySelector('.controls-wrapper');
-            if (document.fullscreenElement) {
-                controlsWrapper.style.display = 'none'; // Ẩn toàn bộ nút điều khiển (TV & Âm thanh) khi ở toàn màn hình
-            } else {
+            const fsElement = document.fullscreenElement || document.webkitFullscreenElement;
+            if (fsElement) {
+                controlsWrapper.style.display = 'none'; // Ẩn toàn bộ nút điều khiển khi ở toàn màn hình
+            } else if (!isSimulatedFullscreeniOS) {
                 controlsWrapper.style.display = 'flex'; // Hiện lại các nút khi thoát toàn màn hình
             }
         }
         document.addEventListener('fullscreenchange', updateFullscreenUI);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenUI);
 
         const fsBtn = document.getElementById('fullscreen-toggle');
         const toastMsg = document.getElementById('toast-msg');
@@ -683,8 +705,12 @@
             if (e.ctrlKey && (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27)) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (document.fullscreenElement && document.exitFullscreen) {
-                    document.exitFullscreen().catch(() => {});
+                const exitFS = document.exitFullscreen || document.webkitExitFullscreen;
+                if ((document.fullscreenElement || document.webkitFullscreenElement) && exitFS) {
+                    exitFS.call(document).catch(() => {});
+                } else if (isSimulatedFullscreeniOS) {
+                    isSimulatedFullscreeniOS = false;
+                    updateFullscreenUI();
                 }
                 return;
             }
