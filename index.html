@@ -21,6 +21,7 @@
         body {
             width: 100vw;
             height: 100vh;
+            height: 100dvh;
             overflow: hidden; /* Chặn cuộn trang */
             background-color: #87CEEB; /* Màu bầu trời mặc định */
             transition: background-color 3s ease; /* Chuyển màu mượt hơn (1 phút đổi 1 lần) */
@@ -184,9 +185,9 @@
         }
 
         .controls-wrapper {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
+            position: fixed;
+            top: max(16px, env(safe-area-inset-top, 16px));
+            right: max(16px, env(safe-area-inset-right, 16px));
             display: flex;
             gap: 12px;
             z-index: 200;
@@ -214,9 +215,9 @@
 
         /* Thông báo hướng dẫn nhanh cho nút Fullscreen khi chạm tay */
         #toast-msg {
-            position: absolute;
-            bottom: 85px;
-            right: 20px;
+            position: fixed;
+            top: calc(max(16px, env(safe-area-inset-top, 16px)) + 62px);
+            right: max(16px, env(safe-area-inset-right, 16px));
             background: rgba(0, 0, 0, 0.75);
             color: #fff;
             padding: 8px 16px;
