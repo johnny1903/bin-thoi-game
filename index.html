@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <!-- Cấu hình viewport chặn zoom và co giãn để bé không vô tình phóng to màn hình -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bé Chơi Bàn Phím & Cảm Ứng</title>
+    <!-- Sử dụng font chữ tròn trịa, đáng yêu -->
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        /* RESET & SETUP CƠ BẢN */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none; /* Chặn bôi đen văn bản */
+            -webkit-user-select: none;
+            -webkit-touch-callout: none; /* Chặn menu ngữ cảnh trên mobile */
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* Chặn cuộn trang */
+            background-color: #87CEEB; /* Màu bầu trời mặc định */
+            transition: background-color 3s ease; /* Chuyển màu mượt hơn (1 phút đổi 1 lần) */
+            font-family: 'Baloo 2', cursive, sans-serif;
+            position: relative;
+            touch-action: none; /* Chặn mọi thao tác vuốt của trình duyệt */
+        }
+
+        /* Lời chào mừng lúc mới vào */
+        #welcome-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+            width: 90%;
+        }
+        #welcome-message h1 {
+            font-size: 3rem;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+        #welcome-message p {
+            font-size: 1.5rem;
+            animation: pulse 1.5s infinite alternate;
+        }
+
+        @media (max-width: 600px) {
+            #welcome-message h1 { font-size: 2rem; }
+            #welcome-message p { font-size: 1.2rem; }
+        }
+
+        /* KHU VỰC CÁC HIỆU ỨNG TƯƠNG TÁC (EMOJIS) */
+        .interactive-item {
+            position: absolute;
+            font-size: 5rem; /* Kích thước to rõ cho bé */
+            pointer-events: auto; /* Cho phép bé chạm/click trực tiếp vào hình */
+            cursor: pointer;
+            will-change: transform, opacity;
+            z-index: 20;
+        }
+
+        /* HOẠT ẢNH 1: Nhảy lên và lắc lư (Dành cho con vật) */
+        .anim-pop-wiggle {
+            animation: popWiggle 2.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* HOẠT ẢNH 2: Bay bổng lên trên (Dành cho bong bóng, tên lửa) */
+        .anim-float-up {
+            animation: floatUp 3.5s ease-in forwards;
+        }
+
+        /* HOẠT ẢNH 3: Xe xuất hiện NGAY TẠI ĐIỂM CHẠM và di chuyển lượn sóng */
+        .anim-drive-right {
+            animation: driveRightWavy 8s cubic-bezier(0.37, 0, 0.63, 1) forwards;
+        }
+        .anim-drive-left {
+            animation: driveLeftWavy 8s cubic-bezier(0.37, 0, 0.63, 1) forwards;
+        }
+
+        /* HOẠT ẢNH 4: Xoay tròn và mờ dần (Dành cho ngôi sao, hoa) */
+        .anim-spin-fade {
+            animation: spinFade 2.2s ease-out forwards;
+        }
+
+        /* HẠT BONG BÓNG TAN VỠ KHI BÉ BẤM TRÚNG HÌNH */
+        .pop-particle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 150;
+            animation: popParticleAnim 0.45s ease-out forwards;
+        }
+
+        @keyframes popParticleAnim {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0); opacity: 0; }
+        }
+
+        /* HẠT PHÁO HOA NHẸ NHÀNG */
+        .firework-particle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 140;
+            box-shadow: 0 0 8px currentColor;
+            animation: fireworkAnim 0.85s ease-out forwards;
+        }
+
+        @keyframes fireworkAnim {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            50% { opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--fx)), calc(-50% + var(--fy))) scale(1.6); opacity: 0; }
+        }
+
+        /* --- ĐỊNH NGHĨA KEYFRAMES --- */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        @keyframes popWiggle {
+            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+            20% { transform: scale(1.3) rotate(-10deg); }
+            40% { transform: scale(1) rotate(10deg); }
+            60% { transform: scale(1.1) rotate(-10deg); }
+            80% { transform: scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: scale(0) rotate(0deg); opacity: 0; }
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            10% { transform: translateY(-20px) scale(1); opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-300px) scale(1.5); opacity: 0; }
+        }
+
+        /* Đường chạy lượn sóng bắt đầu NGAY vị trí điểm bấm (--startX) */
+        @keyframes driveRightWavy {
+            0% { left: calc(var(--startX) * 1px - 2rem); transform: scaleX(-1) translateY(0px) rotate(0deg); opacity: 1; }
+            20% { transform: scaleX(-1) translateY(-50px) rotate(-8deg); }
+            40% { transform: scaleX(-1) translateY(40px) rotate(8deg); }
+            60% { transform: scaleX(-1) translateY(-40px) rotate(-6deg); }
+            80% { transform: scaleX(-1) translateY(30px) rotate(6deg); }
+            100% { left: 125vw; transform: scaleX(-1) translateY(0px) rotate(0deg); opacity: 1; }
+        }
+
+        @keyframes driveLeftWavy {
+            0% { left: calc(var(--startX) * 1px - 2rem); transform: scaleX(1) translateY(0px) rotate(0deg); opacity: 1; }
+            20% { transform: scaleX(1) translateY(50px) rotate(8deg); }
+            40% { transform: scaleX(1) translateY(-40px) rotate(-8deg); }
+            60% { transform: scaleX(1) translateY(40px) rotate(6deg); }
+            80% { transform: scaleX(1) translateY(-30px) rotate(-6deg); }
+            100% { left: -25vw; transform: scaleX(1) translateY(0px) rotate(0deg); opacity: 1; }
+        }
+
+        @keyframes spinFade {
+            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
+            100% { transform: scale(2) rotate(360deg); opacity: 0; }
+        }
+
+        /* KHU VỰC NÚT ĐIỀU KHIỂN & CANVAS VẼ */
+        #trail-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .controls-wrapper {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            z-index: 200;
+        }
+
+        .btn-control {
+            background: rgba(255, 255, 255, 0.35);
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 52px;
+            height: 52px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            outline: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .btn-control:active {
+            transform: scale(0.9);
+        }
+
+        /* Thông báo hướng dẫn nhanh cho nút Fullscreen khi chạm tay */
+        #toast-msg {
+            position: absolute;
+            bottom: 85px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="welcome-message">
+        <h1>Chào bé yêu!</h1>
+        <p>Bấm bàn phím, chạm hoặc vuốt màn hình nhé! 👇</p>
+    </div>
+
+    <!-- Canvas vẽ nét đút/vuốt tự biến mất -->
+    <canvas id="trail-canvas"></canvas>
+
+    <div id="toast-msg">Chạm 2 lần để bật toàn màn hình (Thoát: Ctrl + Esc) 📺</div>
+
+    <div class="controls-wrapper">
+        <button id="fullscreen-toggle" class="btn-control" title="Toàn màn hình">📺</button>
+        <button id="audio-toggle" class="btn-control" title="Bật/Tắt Âm thanh">🔊</button>
+    </div>
+
+    <script>
+        // --- CƠ SỞ DỮ LIỆU ĐỒ CHƠI & MÀU SẮC ---
+        const backgroundColors = [
+            '#FF6B6B', '#4D96FF', '#6BCB77', '#FFD93D', '#FF9F45', 
+            '#B5179E', '#48CAE4', '#9D4EDD', '#F4A261', '#2A9D8F',
+            '#FF8FAB', '#8338EC', '#38B000'
+        ];
+
+        // Phân loại emoji - Bao gồm đầy đủ XE CÔNG TRÌNH, MÁY BAY, TÊN LỬA & ĐOÀN TÀU
+        const emojiCategories = {
+            animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🐤'],
+            construction: ['🏗️', '🚜', '🚛', '🛻', '🚚', '⛏️', '🚧', '🧱', '🛞', '⛽', '🧹', '🔨', '🛠️'],
+            airplanes_rockets: ['✈️', '🛩️', '🛫', '🛬', '🚁', '🚀', '🛸', '🛰️', '🪂'],
+            vehicles: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛵', '🚂', '🚆', '🚄', '🚅', '🚈', '🚝', '🚋', '🚃'],
+            floaters: ['🎈', '🪁', '🚁', '🚀', '🛸', '🦋', '🐞', '🫧', '🕊️'],
+            shapes: ['⭐', '🌟', '✨', '❤️', '💖', '🌞', '🌻', '🌼', '🍉', '🍎', '🍓']
+        };
+
+        let isFirstInteraction = true;
+        let isAudioEnabled = true;
+        let audioCtx = null;
+
+        // --- CANVAS VẼ TỰ BIẾN MẤT (MAGIC DUST TRAIL) ---
+        const canvas = document.getElementById('trail-canvas');
+        const ctx = canvas.getContext('2d');
+        let strokePoints = [];
+        let isMouseDown = false;
+        let hueIndex = 0;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function addTrailPoint(x, y) {
+            hueIndex = (hueIndex + 5) % 360;
+            strokePoints.push({
+                x: x,
+                y: y,
+                color: `hsl(${hueIndex}, 100%, 65%)`,
+                size: 18 + Math.random() * 8,
+                createdAt: Date.now()
+            });
+        }
+
+        // Vòng lặp vẽ và tự mờ nét vẽ sau 2 giây
+        function animateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const now = Date.now();
+            const maxLife = 2000; // Nét vẽ tồn tại 2 giây
+
+            strokePoints = strokePoints.filter(p => now - p.createdAt < maxLife);
+
+            for (let i = 0; i < strokePoints.length; i++) {
+                const pt = strokePoints[i];
+                const age = now - pt.createdAt;
+                const alpha = 1 - age / maxLife;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.size * alpha, 0, Math.PI * 2);
+                ctx.fillStyle = pt.color;
+                ctx.globalAlpha = alpha;
+                ctx.shadowColor = pt.color;
+                ctx.shadowBlur = 12;
+                ctx.fill();
+                ctx.restore();
+
+                if (i > 0 && (now - strokePoints[i - 1].createdAt < maxLife)) {
+                    const prev = strokePoints[i - 1];
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(prev.x, prev.y);
+                    ctx.lineTo(pt.x, pt.y);
+                    ctx.strokeStyle = pt.color;
+                    ctx.lineWidth = pt.size * alpha * 1.5;
+                    ctx.lineCap = 'round';
+                    ctx.globalAlpha = alpha * 0.7;
+                    ctx.shadowColor = pt.color;
+                    ctx.shadowBlur = 10;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            requestAnimationFrame(animateCanvas);
+        }
+        animateCanvas();
+
+        // --- HỆ THỐNG ÂM THANH (Web Audio API) ---
+        function playCuteSound() {
+            if (!isAudioEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                const soundType = Math.random();
+                if (soundType > 0.5) {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400 + Math.random() * 400, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800 + Math.random() * 400, audioCtx.currentTime + 0.1);
+                    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.2);
+                } else {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300 + Math.random() * 300, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                }
+            } catch(e) {}
+        }
+
+        function playPopSound() {
+            if (!isAudioEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(700, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            } catch(e) {}
+        }
+
+        function playFireworkSound() {
+            if (!isAudioEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.04);
+                    gain.gain.setValueAtTime(0.03, audioCtx.currentTime + idx * 0.04);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.04 + 0.25);
+
+                    osc.start(audioCtx.currentTime + idx * 0.04);
+                    osc.stop(audioCtx.currentTime + idx * 0.04 + 0.25);
+                });
+            } catch(e) {}
+        }
+
+        // --- XỬ LÝ TOÀN MÀN HÌNH VÀ ÂM THANH ---
+        async function toggleFullscreen() {
+            try {
+                if (!document.fullscreenElement) {
+                    if (document.documentElement.requestFullscreen) {
+                        try {
+                            // Yêu cầu khóa bàn phím hệ thống ở chế độ toàn màn hình
+                            await document.documentElement.requestFullscreen({ keyboardLock: "browser" });
+                        } catch (e) {
+                            await document.documentElement.requestFullscreen();
+                        }
+                    }
+                    if (navigator.keyboard && navigator.keyboard.lock) {
+                        await navigator.keyboard.lock();
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        await document.exitFullscreen();
+                    }
+                }
+            } catch (err) {
+                console.log("Fullscreen error:", err);
+            }
+        }
+
+        function updateFullscreenUI() {
+            const controlsWrapper = document.querySelector('.controls-wrapper');
+            if (document.fullscreenElement) {
+                controlsWrapper.style.display = 'none'; // Ẩn toàn bộ nút điều khiển (TV & Âm thanh) khi ở toàn màn hình
+            } else {
+                controlsWrapper.style.display = 'flex'; // Hiện lại các nút khi thoát toàn màn hình
+            }
+        }
+        document.addEventListener('fullscreenchange', updateFullscreenUI);
+
+        const fsBtn = document.getElementById('fullscreen-toggle');
+        let lastTapTime = 0;
+        const toastMsg = document.getElementById('toast-msg');
+
+        function showToast(text) {
+            toastMsg.innerText = text;
+            toastMsg.style.opacity = '1';
+            setTimeout(() => { toastMsg.style.opacity = '0'; }, 3000);
+        }
+
+        fsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!('ontouchstart' in window)) {
+                toggleFullscreen();
+            }
+        });
+
+        fsBtn.addEventListener('touchend', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+            if (tapLength < 400 && tapLength > 0) {
+                toggleFullscreen();
+            } else {
+                showToast('Chạm 2 lần liên tiếp để bật toàn màn hình!');
+            }
+            lastTapTime = currentTime;
+        });
+
+        const audioBtn = document.getElementById('audio-toggle');
+        const handleAudioToggle = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            isAudioEnabled = !isAudioEnabled;
+            audioBtn.innerText = isAudioEnabled ? '🔊' : '🔇';
+        };
+        audioBtn.addEventListener('click', (e) => { e.stopPropagation(); isAudioEnabled = !isAudioEnabled; audioBtn.innerText = isAudioEnabled ? '🔊' : '🔇'; });
+        audioBtn.addEventListener('touchend', handleAudioToggle);
+
+        // --- ĐỔI MÀU NỀN TỰ ĐỘNG MỖI 1 PHÚT ---
+        function changeBackgroundColor() {
+            const randomColor = backgroundColors[Math.floor(Math.random() * backgroundColors.length)];
+            document.body.style.backgroundColor = randomColor;
+        }
+        setInterval(changeBackgroundColor, 60000);
+
+        // HIỆU ỨNG VỠ/TAN BẾT KHI BÉ BẤM TRÚNG HÌNH
+        function createPopBurst(x, y) {
+            playPopSound();
+            const burstCount = 10;
+            for (let i = 0; i < burstCount; i++) {
+                const p = document.createElement('div');
+                p.className = 'pop-particle';
+                const angle = (i / burstCount) * Math.PI * 2;
+                const dist = 35 + Math.random() * 30;
+                const tx = Math.cos(angle) * dist;
+                const ty = Math.sin(angle) * dist;
+                const color = backgroundColors[Math.floor(Math.random() * backgroundColors.length)];
+
+                p.style.left = `${x}px`;
+                p.style.top = `${y}px`;
+                p.style.backgroundColor = color;
+                p.style.setProperty('--tx', `${tx}px`);
+                p.style.setProperty('--ty', `${ty}px`);
+
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 450);
+            }
+        }
+
+        // HIỆU ỨNG PHÁO HOA NHẸ NHÀNG
+        function createGentleFirework(x, y) {
+            playFireworkSound();
+            const particleCount = 12;
+            for (let i = 0; i < particleCount; i++) {
+                const p = document.createElement('div');
+                p.className = 'firework-particle';
+                const angle = (i / particleCount) * Math.PI * 2;
+                const dist = 50 + Math.random() * 40;
+                const fx = Math.cos(angle) * dist;
+                const fy = Math.sin(angle) * dist;
+                const color = backgroundColors[Math.floor(Math.random() * backgroundColors.length)];
+
+                p.style.left = `${x}px`;
+                p.style.top = `${y}px`;
+                p.style.backgroundColor = color;
+                p.style.color = color;
+                p.style.setProperty('--fx', `${fx}px`);
+                p.style.setProperty('--fy', `${fy}px`);
+
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 850);
+            }
+        }
+
+        function spawnInteraction(x, y) {
+            if (isFirstInteraction) {
+                document.getElementById('welcome-message').style.opacity = '0';
+                isFirstInteraction = false;
+            }
+
+            // Xuất hiện pháo hoa ngẫu nhiên
+            if (Math.random() < 0.3) {
+                createGentleFirework(x, y);
+            }
+
+            playCuteSound();
+
+            const el = document.createElement('div');
+            el.className = 'interactive-item';
+
+            // Đếm số lượng xe/máy bay đang di chuyển trên màn hình
+            const currentDrivingVehicles = document.querySelectorAll('.anim-drive-right, .anim-drive-left').length;
+
+            let categories = Object.keys(emojiCategories);
+            
+            // FIX LỖI 1: Nếu đã có 3 xe trở lên trên màn hình -> GIỚI HẠN không tạo thêm xe nữa!
+            if (currentDrivingVehicles >= 3) {
+                categories = ['animals', 'floaters', 'shapes'];
+            }
+
+            const randomCategory = categories[Math.floor(Math.random() * categories.length)];
+            const items = emojiCategories[randomCategory];
+            const randomEmoji = items[Math.floor(Math.random() * items.length)];
+
+            el.innerText = randomEmoji;
+
+            // Xử lý sự kiện chạm/bấm trực tiếp vào hình để làm nổ bung
+            const handlePopOnTouch = (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const rect = el.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                createPopBurst(centerX, centerY);
+                el.remove();
+            };
+
+            el.addEventListener('mousedown', handlePopOnTouch);
+            el.addEventListener('touchstart', handlePopOnTouch, { passive: false });
+
+            const scaleSize = 0.8 + Math.random() * 0.8;
+            let animDuration = 2500;
+
+            // FIX LỖI 2: Mọi vật thể (kể cả xe cộ, máy bay) ĐỀU XUẤT HIỆN NGAY TẠI TỌA ĐỘ VỪA BẤM (x, y)
+            if (randomCategory === 'vehicles' || randomCategory === 'construction' || randomCategory === 'airplanes_rockets') {
+                el.style.top = `calc(${y}px - 3rem)`;
+                el.style.fontSize = (5.5 * scaleSize) + 'rem';
+                
+                // Truyền tọa độ x vào CSS Variable để animation bắt đầu NGAY vị trí ngón tay bé vừa chạm
+                el.style.setProperty('--startX', x);
+
+                if (Math.random() > 0.5) {
+                    el.classList.add('anim-drive-right');
+                } else {
+                    el.classList.add('anim-drive-left');
+                }
+                animDuration = 8000; // Thời gian di chuyển 8 giây mượt mà
+            } 
+            else if (randomCategory === 'floaters') {
+                el.style.left = `calc(${x}px - 2.5rem)`;
+                el.style.top = `calc(${y}px - 2.5rem)`;
+                el.style.fontSize = (5 * scaleSize) + 'rem';
+                el.classList.add('anim-float-up');
+                animDuration = 3500;
+            }
+            else if (randomCategory === 'shapes') {
+                el.style.left = `calc(${x}px - 2.5rem)`;
+                el.style.top = `calc(${y}px - 2.5rem)`;
+                el.style.fontSize = (4 * scaleSize) + 'rem';
+                el.classList.add('anim-spin-fade');
+                animDuration = 2200;
+            }
+            else {
+                el.style.left = `calc(${x}px - 2.5rem)`;
+                el.style.top = `calc(${y}px - 2.5rem)`;
+                el.style.fontSize = (5 * scaleSize) + 'rem';
+                el.classList.add('anim-pop-wiggle');
+                animDuration = 2500;
+            }
+
+            // Giới hạn tổng số lượng vật thể trên màn hình để giữ độ mượt (tối đa 15 vật thể cùng lúc)
+            const currentItems = document.getElementsByClassName('interactive-item');
+            if (currentItems.length > 15) {
+                currentItems[0].remove();
+            }
+
+            document.body.appendChild(el);
+
+            setTimeout(() => {
+                if (el.parentNode) {
+                    el.remove();
+                }
+            }, animDuration);
+        }
+
+        // --- XỬ LÝ SỰ KIỆN ĐẦU VÀO & KHÓA PHÍM MÁY TÍNH ---
+        // Hàm kiểm tra và chặn triệt để phím Print Screen (Prt Scr)
+        const isPrtScrKey = (e) => (
+            e.key === 'PrintScreen' || 
+            e.code === 'PrintScreen' || 
+            e.keyCode === 44 || 
+            e.which === 44
+        );
+
+        const blockPrtScrEvent = (e) => {
+            if (isPrtScrKey(e)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                // Xóa bộ nhớ tạm để ngăn chụp ảnh màn hình thành công
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText('');
+                    }
+                } catch (err) {}
+                return false;
+            }
+        };
+
+        // Bắt chặn Prt Scr ở tất cả các tầng bắt sự kiện (Capture phase: true)
+        window.addEventListener('keydown', blockPrtScrEvent, true);
+        window.addEventListener('keyup', blockPrtScrEvent, true);
+        document.addEventListener('keydown', blockPrtScrEvent, true);
+        document.addEventListener('keyup', blockPrtScrEvent, true);
+
+        window.addEventListener('keydown', (e) => {
+            if (isPrtScrKey(e)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            // Kiểm tra phím tắt thoát toàn màn hình dành cho phụ huynh: Ctrl + ESC
+            if (e.ctrlKey && (e.key === 'Escape' || e.code === 'Escape' || e.keyCode === 27)) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (document.fullscreenElement && document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                }
+                return;
+            }
+
+            // Chặn trực tiếp phím Windows, Tab, Alt...
+            if (
+                e.key === 'Meta' || e.key === 'OS' || 
+                e.code === 'MetaLeft' || e.code === 'MetaRight' || 
+                e.keyCode === 91 || e.keyCode === 92 ||
+                e.key === 'Tab' || e.key === 'Alt'
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (e.repeat) return; // Chặn đè giữ phím
+            
+            const randomX = 0.2 * window.innerWidth + Math.random() * (0.6 * window.innerWidth);
+            const randomY = 0.2 * window.innerHeight + Math.random() * (0.6 * window.innerHeight);
+            spawnInteraction(randomX, randomY);
+        }, true);
+
+        window.addEventListener('keyup', (e) => {
+            if (isPrtScrKey(e)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+        }, true);
+
+        // Chặn menu chuột phải
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Chuột & Vẽ rê chuột
+        window.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.controls-wrapper')) return;
+            isMouseDown = true;
+            addTrailPoint(e.clientX, e.clientY);
+            spawnInteraction(e.clientX, e.clientY);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isMouseDown) {
+                addTrailPoint(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+        // Cảm ứng & Vuốt ngón tay
+        window.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.controls-wrapper')) return;
+            e.preventDefault(); 
+            
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const touch = e.changedTouches[i];
+                addTrailPoint(touch.clientX, touch.clientY);
+                spawnInteraction(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.target.closest('.controls-wrapper')) return;
+            e.preventDefault();
+
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                addTrailPoint(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
