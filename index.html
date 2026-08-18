@@ -240,7 +240,7 @@
     <!-- Canvas vẽ nét đút/vuốt tự biến mất -->
     <canvas id="trail-canvas"></canvas>
 
-    <div id="toast-msg">Chạm 2 lần để bật toàn màn hình (Thoát: Ctrl + Esc) 📺</div>
+    <div id="toast-msg">Thoát toàn màn hình: Ctrl + Esc 📺</div>
 
     <div class="controls-wrapper">
         <button id="fullscreen-toggle" class="btn-control" title="Toàn màn hình">📺</button>
@@ -454,7 +454,6 @@
         document.addEventListener('fullscreenchange', updateFullscreenUI);
 
         const fsBtn = document.getElementById('fullscreen-toggle');
-        let lastTapTime = 0;
         const toastMsg = document.getElementById('toast-msg');
 
         function showToast(text) {
@@ -463,25 +462,18 @@
             setTimeout(() => { toastMsg.style.opacity = '0'; }, 3000);
         }
 
-        fsBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (!('ontouchstart' in window)) {
-                toggleFullscreen();
-            }
-        });
-
-        fsBtn.addEventListener('touchend', (e) => {
+        const handleFullscreenToggle = (e) => {
             e.stopPropagation();
             e.preventDefault();
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTapTime;
-            if (tapLength < 400 && tapLength > 0) {
-                toggleFullscreen();
-            } else {
-                showToast('Chạm 2 lần liên tiếp để bật toàn màn hình!');
-            }
-            lastTapTime = currentTime;
+            toggleFullscreen();
+        };
+
+        fsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleFullscreen();
         });
+
+        fsBtn.addEventListener('touchend', handleFullscreenToggle);
 
         const audioBtn = document.getElementById('audio-toggle');
         const handleAudioToggle = (e) => {
